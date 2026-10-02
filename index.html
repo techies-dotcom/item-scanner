@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+
   <title>Item Scanner</title>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
+
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -27,73 +32,402 @@
       border-radius: 10px;
     }
 
-    #message {
-      margin-top: 20px;
-      font-size: 16px;
+    #itemPanel {
+      display: none;
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 25px;
+      background: white;
+      border-radius: 10px;
     }
+
+    #itemId {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    #status {
+      font-size: 20px;
+      margin: 15px;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 10px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #actionButton {
+      background: #222;
+      color: white;
+    }
+
+    #scanAgainButton {
+      background: #ddd;
+      color: #222;
+    }
+
+    #message {
+      margin-top: 15px;
+    }
+
   </style>
+
 </head>
+
 
 <body>
 
-  <h1>Scan Item</h1>
+  <h1>Item Scanner</h1>
 
-  <div id="reader"></div>
 
-  <div id="message">
-    Point the camera at the QR code.
+  <!-- SCANNER -->
+
+  <div id="scannerPanel">
+
+    <div id="reader"></div>
+
+    <div id="message">
+      Point the camera at the QR code.
+    </div>
+
   </div>
 
-  <script>
 
-    const APP_URL =
-      'https://script.google.com/macros/s/AKfycbwOl9u5ok4MX15mU8E1TaJrSWeXqafXNFbvUduvZcj0X0_AsjLmeKM9xG2ZyyO2f3U/exec';
+  <!-- ITEM -->
 
-    let alreadyScanned = false;
+  <div id="itemPanel">
 
-    function onScanSuccess(decodedText) {
+    <div id="itemId"></div>
 
-      if (alreadyScanned) {
-        return;
-      }
-    
-      alreadyScanned = true;
-    
-      const id = decodedText.trim();
-    
+    <div id="status"></div>
+
+    <button id="actionButton"></button>
+
+    <button id="scanAgainButton">
+      SCAN NEXT ITEM
+    </button>
+
+  </div>
+
+
+<script>
+
+
+// =====================================================
+// CONFIGURATION
+// =====================================================
+
+const API_URL =
+  'https://script.google.com/macros/s/AKfycbwOl9u5ok4MX15mU8E1TaJrSWeXqafXNFbvUduvZcj0X0_AsjLmeKM9xG2ZyyO2f3U/exec';
+
+const API_TOKEN =
+  'PUT_YOUR_SECRET_TOKEN_HERE';
+
+
+// =====================================================
+// VARIABLES
+// =====================================================
+
+let scanner;
+
+let currentItemId = '';
+
+let alreadyScanned = false;
+
+
+// =====================================================
+// API CALL
+// =====================================================
+
+async function apiRequest(action, id, status = '') {
+
+  const response = await fetch(API_URL, {
+
+    method: 'POST',
+
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+
+    body: JSON.stringify({
+
+      token: API_TOKEN,
+
+      action: action,
+
+      id: id,
+
+      status: status
+
+    })
+
+  });
+
+  return await response.json();
+}
+
+
+// =====================================================
+// SCAN SUCCESS
+// =====================================================
+
+async function onScanSuccess(decodedText) {
+
+  if (alreadyScanned) {
+    return;
+  }
+
+  alreadyScanned = true;
+
+  const id = decodedText.trim();
+
+  currentItemId = id;
+
+  document.getElementById('message').innerText =
+    'Checking item...';
+
+
+  try {
+
+    const result =
+      await apiRequest('getStatus', id);
+
+
+    if (!result.ok) {
+
       document.getElementById('message').innerText =
-        'Item detected: ' + id + '\nOpening item...';
-    
-      const url =
-        APP_URL + '?id=' + encodeURIComponent(id);
-    
-      window.location.assign(url);
+        result.message;
+
+      alreadyScanned = false;
+
+      return;
     }
 
-    function onScanFailure(error) {
-      // Ignore normal scanning failures
-    }
 
-    const html5QrcodeScanner =
-      new Html5QrcodeScanner(
-        "reader",
-        {
-          fps: 10,
-          qrbox: {
-            width: 250,
-            height: 250
-          },
-          rememberLastUsedCamera: true
-        },
-        false
+    await scanner.clear();
+
+
+    showItem(result);
+
+
+  } catch (error) {
+
+    document.getElementById('message').innerText =
+      'Connection error: ' + error.message;
+
+    alreadyScanned = false;
+
+  }
+
+}
+
+
+// =====================================================
+// SHOW ITEM
+// =====================================================
+
+function showItem(result) {
+
+  document.getElementById('scannerPanel').style.display =
+    'none';
+
+  document.getElementById('itemPanel').style.display =
+    'block';
+
+
+  document.getElementById('itemId').innerText =
+    'ID: ' + result.id;
+
+
+  const status =
+    result.exists
+      ? result.status
+      : 'New';
+
+
+  document.getElementById('status').innerText =
+    'Status: ' + status;
+
+
+  const button =
+    document.getElementById('actionButton');
+
+
+  if (!result.exists) {
+
+    button.innerText =
+      'REGISTER ITEM';
+
+    button.style.display =
+      'block';
+
+    button.onclick =
+      () => updateStatus('Waiting');
+
+  }
+
+
+  else if (result.status === 'Waiting') {
+
+    button.innerText =
+      'START WORK';
+
+    button.style.display =
+      'block';
+
+    button.onclick =
+      () => updateStatus('Processed');
+
+  }
+
+
+  else if (result.status === 'Processed') {
+
+    button.innerText =
+      'MARK DONE';
+
+    button.style.display =
+      'block';
+
+    button.onclick =
+      () => updateStatus('Done');
+
+  }
+
+
+  else if (result.status === 'Done') {
+
+    button.style.display =
+      'none';
+
+  }
+
+}
+
+
+// =====================================================
+// UPDATE STATUS
+// =====================================================
+
+async function updateStatus(newStatus) {
+
+  const button =
+    document.getElementById('actionButton');
+
+  button.disabled = true;
+
+  button.innerText =
+    'Saving...';
+
+
+  try {
+
+    const result =
+      await apiRequest(
+        'updateStatus',
+        currentItemId,
+        newStatus
       );
 
-    html5QrcodeScanner.render(
-      onScanSuccess,
-      onScanFailure
+
+    if (!result.ok) {
+
+      alert(result.message);
+
+      button.disabled = false;
+
+      return;
+
+    }
+
+
+    // Refresh item status
+
+    const updated =
+      await apiRequest(
+        'getStatus',
+        currentItemId
+      );
+
+
+    showItem(updated);
+
+
+  } catch (error) {
+
+    alert(
+      'Connection error: ' +
+      error.message
     );
 
-  </script>
+    button.disabled = false;
+
+  }
+
+}
+
+
+// =====================================================
+// SCAN NEXT
+// =====================================================
+
+document
+  .getElementById('scanAgainButton')
+  .addEventListener('click', function() {
+
+    location.reload();
+
+  });
+
+
+// =====================================================
+// START SCANNER
+// =====================================================
+
+function onScanFailure(error) {
+
+  // Normal scanning failures are ignored.
+
+}
+
+
+scanner =
+  new Html5QrcodeScanner(
+
+    "reader",
+
+    {
+
+      fps: 10,
+
+      qrbox: {
+        width: 250,
+        height: 250
+      },
+
+      rememberLastUsedCamera: true
+
+    },
+
+    false
+
+  );
+
+
+scanner.render(
+  onScanSuccess,
+  onScanFailure
+);
+
+
+</script>
 
 </body>
+
 </html>
