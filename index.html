@@ -56,26 +56,18 @@
       if (alreadyScanned) {
         return;
       }
-
+    
       alreadyScanned = true;
-
+    
       const id = decodedText.trim();
-
+    
       document.getElementById('message').innerText =
         'Item detected: ' + id + '\nOpening item...';
-
-      // Stop scanner before leaving page
-      html5QrcodeScanner.clear().then(function() {
-
-        window.location.href =
-          APP_URL + '?id=' + encodeURIComponent(id);
-
-      }).catch(function() {
-
-        window.location.href =
-          APP_URL + '?id=' + encodeURIComponent(id);
-
-      });
+    
+      const url =
+        APP_URL + '?id=' + encodeURIComponent(id);
+    
+      window.location.assign(url);
     }
 
     function onScanFailure(error) {
