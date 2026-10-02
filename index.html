@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Item Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    #reader {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    #message {
+      margin-top: 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Scan Item</h1>
+
+  <div id="reader"></div>
+
+  <div id="message">
+    Point the camera at the QR code.
+  </div>
+
+  <script>
+
+    const APP_URL =
+      'https://script.google.com/macros/s/AKfycbwOl9u5ok4MX15mU8E1TaJrSWeXqafXNFbvUduvZcj0X0_AsjLmeKM9xG2ZyyO2f3U/exec';
+
+    let alreadyScanned = false;
+
+    function onScanSuccess(decodedText) {
+
+      if (alreadyScanned) {
+        return;
+      }
+
+      alreadyScanned = true;
+
+      const id = decodedText.trim();
+
+      document.getElementById('message').innerText =
+        'Item detected: ' + id + '\nOpening item...';
+
+      // Stop scanner before leaving page
+      html5QrcodeScanner.clear().then(function() {
+
+        window.location.href =
+          APP_URL + '?id=' + encodeURIComponent(id);
+
+      }).catch(function() {
+
+        window.location.href =
+          APP_URL + '?id=' + encodeURIComponent(id);
+
+      });
+    }
+
+    function onScanFailure(error) {
+      // Ignore normal scanning failures
+    }
+
+    const html5QrcodeScanner =
+      new Html5QrcodeScanner(
+        "reader",
+        {
+          fps: 10,
+          qrbox: {
+            width: 250,
+            height: 250
+          },
+          rememberLastUsedCamera: true
+        },
+        false
+      );
+
+    html5QrcodeScanner.render(
+      onScanSuccess,
+      onScanFailure
+    );
+
+  </script>
+
+</body>
+</html>
