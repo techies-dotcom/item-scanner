@@ -259,52 +259,62 @@ function showItem(result) {
     document.getElementById('actionButton');
 
 
+  // Reset button completely
+  button.disabled = false;
+  button.style.display = 'block';
+  button.onclick = null;
+
+
+  // New item
   if (!result.exists) {
 
     button.innerText =
       'REGISTER ITEM';
 
-    button.style.display =
-      'block';
-
     button.onclick =
-      () => updateStatus('Waiting');
+      function() {
+        updateStatus('Waiting');
+      };
 
   }
 
 
+  // Waiting → Processed
   else if (result.status === 'Waiting') {
 
     button.innerText =
       'START WORK';
 
-    button.style.display =
-      'block';
-
     button.onclick =
-      () => updateStatus('Processed');
+      function() {
+        updateStatus('Processed');
+      };
 
   }
 
 
+  // Processed → Done
   else if (result.status === 'Processed') {
 
     button.innerText =
       'MARK DONE';
 
-    button.style.display =
-      'block';
-
     button.onclick =
-      () => updateStatus('Done');
+      function() {
+        updateStatus('Done');
+      };
 
   }
 
 
+  // Already Done
   else if (result.status === 'Done') {
 
-    button.style.display =
-      'none';
+    button.innerText =
+      'COMPLETED';
+
+    button.disabled =
+      true;
 
   }
 
